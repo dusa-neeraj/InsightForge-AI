@@ -2,9 +2,25 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import re
 
 QUANTILES = [0.05, 0.25, 0.5, 0.75, 0.95]
 TOP_N = 5
+
+ID_NAME_RE = re.compile(r"(^|_)(id|uuid|guid|index|idx)$|^unnamed")
+
+
+def _is_identifier(name: str, series: pd.Series, kind: str, unique: int, non_null: int) -> bool:
+    """ID-like columns (order_id, row counters, unique text) are not useful to analyze."""
+    if kind == "date" or non_null < 8:
+        return False
+    if ID_NAME_RE.search(name.lower()):
+        return True
+    if kind == "numeric":
+        if pd.api.types.is_integer_dtype(series) and series.notna().all():
+            return bool((series.diff().dropna() == 1).all())  # 1, 2, 3, ... counter
+        return False
+    return non_null >= 20 and unique / non_null >= 0.95
 
 
 def _num(value: Any) -> int | float | None:
@@ -86,12 +102,7 @@ def profile_column(series: pd.Series) -> dict[str, Any]:
     unique = int(series.nunique(dropna=True))
     kind = column_kind(series)
 
-    likely_id = (
-        kind != "date"
-        and not pd.api.types.is_float_dtype(series)
-        and non_null >= 20
-        and unique / non_null >= 0.95
-    )
+    likely_id = _is_identifier(str(series.name), series, kind, unique, non_null)
 
     info: dict[str, Any] = {
         "name": str(series.name),

@@ -17,3 +17,7 @@ class ProfileResponse(BaseModel):
 class QualityResponse(BaseModel):
     dataset_id: str
     quality: dict[str, Any]
+
+class EDAResponse(BaseModel):
+    dataset_id: str
+    eda: dict[str, Any]
