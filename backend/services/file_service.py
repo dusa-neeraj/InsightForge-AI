@@ -1,5 +1,7 @@
+import json
 import warnings
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -35,12 +37,19 @@ def _restore_dates(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def save_dataset(
-    dataset_id: str, raw_content: bytes, ext: str, clean_df: pd.DataFrame
+    dataset_id: str,
+    raw_content: bytes,
+    ext: str,
+    clean_df: pd.DataFrame,
+    cleaning_report: dict[str, Any],
 ) -> None:
     folder = _dataset_dir(dataset_id)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / f"raw{ext}").write_bytes(raw_content)
     clean_df.to_csv(folder / "clean.csv", index=False)
+    (folder / "cleaning_report.json").write_text(
+        json.dumps(cleaning_report, default=str), encoding="utf-8"
+    )
 
 
 def load_clean_dataset(dataset_id: str) -> pd.DataFrame:
@@ -57,3 +66,10 @@ def load_raw_dataset(dataset_id: str) -> pd.DataFrame:
         if path.exists():
             return _restore_dates(read_dataframe(path.read_bytes(), ext))
     raise DatasetError("Dataset not found.", 404)
+
+
+def load_cleaning_report(dataset_id: str) -> dict[str, Any]:
+    path = _dataset_dir(dataset_id) / "cleaning_report.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))

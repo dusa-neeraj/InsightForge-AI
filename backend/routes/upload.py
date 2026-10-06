@@ -28,7 +28,7 @@ async def upload(file: UploadFile = File(...)):
         raise DatasetError("Cleaning failed for this dataset.", 500)
 
     dataset_id = new_dataset_id()
-    file_service.save_dataset(dataset_id, content, ext, clean_df)
+    file_service.save_dataset(dataset_id, content, ext, clean_df, report)
 
     return UploadResponse(
         dataset_id=dataset_id,

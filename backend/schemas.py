@@ -13,3 +13,7 @@ class ProfileResponse(BaseModel):
     dataset_id: str
     version: str
     profile: dict[str, Any]
+
+class QualityResponse(BaseModel):
+    dataset_id: str
+    quality: dict[str, Any]
