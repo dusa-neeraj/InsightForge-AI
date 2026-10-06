@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 
 import pandas as pd
@@ -5,12 +6,32 @@ import pandas as pd
 from config import settings
 from utils.errors import DatasetError
 from utils.helpers import is_valid_dataset_id
+from utils.validators import read_dataframe
+
+DATE_PATTERN = r"^\s*\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}"
 
 
 def _dataset_dir(dataset_id: str) -> Path:
     if not is_valid_dataset_id(dataset_id):
         raise DatasetError("Invalid dataset ID.", 400)
     return settings.upload_dir / dataset_id
+
+
+def _restore_dates(df: pd.DataFrame) -> pd.DataFrame:
+    """CSV loses date types. Convert text columns that clearly hold dates."""
+    for col in df.columns:
+        series = df[col]
+        if pd.api.types.is_numeric_dtype(series) or pd.api.types.is_datetime64_any_dtype(series):
+            continue
+        text = series.dropna().astype(str)
+        if text.empty or text.str.match(DATE_PATTERN).mean() < 0.9:
+            continue
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            parsed = pd.to_datetime(series, errors="coerce", format="mixed")
+        if parsed.notna().sum() >= 0.9 * len(text):
+            df[col] = parsed
+    return df
 
 
 def save_dataset(
@@ -26,4 +47,13 @@ def load_clean_dataset(dataset_id: str) -> pd.DataFrame:
     path = _dataset_dir(dataset_id) / "clean.csv"
     if not path.exists():
         raise DatasetError("Dataset not found.", 404)
-    return pd.read_csv(path)
+    return _restore_dates(pd.read_csv(path))
+
+
+def load_raw_dataset(dataset_id: str) -> pd.DataFrame:
+    folder = _dataset_dir(dataset_id)
+    for ext in (".csv", ".xlsx"):
+        path = folder / f"raw{ext}"
+        if path.exists():
+            return _restore_dates(read_dataframe(path.read_bytes(), ext))
+    raise DatasetError("Dataset not found.", 404)

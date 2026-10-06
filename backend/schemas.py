@@ -8,3 +8,8 @@ class UploadResponse(BaseModel):
     filename: str
     report: dict[str, Any]
     preview: list[dict[str, str]]
+
+class ProfileResponse(BaseModel):
+    dataset_id: str
+    version: str
+    profile: dict[str, Any]

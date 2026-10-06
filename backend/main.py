@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from config import settings
-from routes import upload
+from routes import datasets, upload
 from utils.errors import DatasetError
 
 logging.basicConfig(
@@ -49,3 +49,4 @@ def health():
 
 
 app.include_router(upload.router)
+app.include_router(datasets.router)
