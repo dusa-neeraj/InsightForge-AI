@@ -20,9 +20,10 @@ async def upload(file: UploadFile = File(...)):
     content = await file.read(settings.max_upload_bytes + 1)
     ext = validate_upload(file.filename, content)
     df = read_dataframe(content, ext)
-
     try:
         clean_df, report = clean_data(df)
+    except DatasetError:
+        raise
     except Exception:
         logger.exception("Cleaning failed")
         raise DatasetError("Cleaning failed for this dataset.", 500)

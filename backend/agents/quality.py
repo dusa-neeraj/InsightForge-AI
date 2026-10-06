@@ -71,44 +71,72 @@ def build_changes(
     """Turn the cleaning report into readable change entries."""
     changes: list[dict[str, Any]] = []
 
+    def add(kind: str, message: str, **extra: Any) -> None:
+        changes.append({"type": kind, "message": message, **extra})
+
+    renamed = cleaning_report.get("columns_renamed", {})
+    if renamed:
+        add("columns_renamed", f"Standardized {len(renamed)} column name(s)", count=len(renamed))
+
+    rows_removed = cleaning_report.get("empty_rows_removed", 0)
+    if rows_removed:
+        add("empty_rows_removed", f"Removed {rows_removed} completely empty row(s)", count=rows_removed)
+
+    for name in cleaning_report.get("empty_columns_dropped", []):
+        add("empty_column_dropped", f"Dropped empty column '{name}'", column=name)
+
+    for name, count in cleaning_report.get("placeholders_to_missing", {}).items():
+        add("placeholders_to_missing",
+            f"Converted {count} placeholder value(s) (like '-' or 'N/A') in '{name}' to missing",
+            column=name, count=count)
+
+    for name, info in cleaning_report.get("type_conversions", {}).items():
+        message = f"Converted '{name}' to {info['to']}"
+        if info.get("invalid_set_missing"):
+            message += f" ({info['invalid_set_missing']} invalid value(s) set to missing)"
+        if info.get("day_first"):
+            message += ", read dates as day-first (DD/MM/YYYY)"
+        add("type_converted", message, column=name)
+
+    for name, info in cleaning_report.get("values_standardized", {}).items():
+        example = info["merged"][0]
+        add("values_standardized",
+            f"Standardized {info['cells_changed']} inconsistent value(s) in '{name}' "
+            f"(e.g. '{example['variants'][0]}' became '{example['canonical']}')",
+            column=name, count=info["cells_changed"])
+
     dupes = cleaning_report.get(
         "duplicates_removed", raw_profile["overview"]["duplicate_rows"]
     )
     if dupes:
-        changes.append(
-            {"type": "duplicates_removed", "count": dupes,
-             "message": f"Removed {dupes} duplicate row(s)"}
-        )
+        add("duplicates_removed", f"Removed {dupes} duplicate row(s)", count=dupes)
 
     clean_cols = {c["name"]: c for c in clean_profile["columns"]}
+    fill_info = cleaning_report.get("missing_filled", {})
+    skipped = cleaning_report.get("missing_skipped_high", {})
     for name, before in cleaning_report.get("missing_before", {}).items():
         col = clean_cols.get(name)
         remaining = col["missing"] if col else 0
         filled = before - remaining
         if filled > 0:
-            method = "the median" if col and col["kind"] == "numeric" else "the most frequent value"
-            changes.append(
-                {"type": "missing_filled", "column": name, "count": filled,
-                 "message": f"Filled {filled} missing value(s) in '{name}' with {method}"}
+            method = fill_info.get(name, {}).get("method") or (
+                "median" if col and col["kind"] == "numeric" else "most frequent value"
             )
+            add("missing_filled",
+                f"Filled {filled} missing value(s) in '{name}' with the {method}",
+                column=name, count=filled)
         if remaining > 0:
-            changes.append(
-                {"type": "missing_left", "column": name, "count": remaining,
-                 "message": f"Left {remaining} missing value(s) in '{name}' unfilled"}
-            )
+            reason = " (too many missing to fill safely)" if name in skipped else ""
+            add("missing_left", f"Left {remaining} missing value(s) in '{name}' unfilled{reason}",
+                column=name, count=remaining)
 
     for name, count in cleaning_report.get("outliers_flagged", {}).items():
-        changes.append(
-            {"type": "outliers_flagged", "column": name, "count": count,
-             "message": f"Flagged {count} outlier(s) in '{name}' (kept in the data)"}
-        )
+        add("outliers_flagged", f"Flagged {count} outlier(s) in '{name}' (kept in the data)",
+            column=name, count=count)
 
     if not changes:
-        changes.append(
-            {"type": "no_changes", "message": "No cleaning changes were needed"}
-        )
+        add("no_changes", "No cleaning changes were needed")
     return changes
-
 
 def _issue(severity: str, column: str | None, kind: str, message: str) -> dict[str, Any]:
     return {"severity": severity, "column": column, "type": kind, "message": message}
