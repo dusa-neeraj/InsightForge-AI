@@ -5,7 +5,8 @@ from fastapi import APIRouter
 from agents.analysis import build_eda
 from agents.profiling import profile_dataframe
 from agents.quality import build_quality_report
-from schemas import EDAResponse, ProfileResponse, QualityResponse
+from agents.visualization import build_charts
+from schemas import ChartsResponse, EDAResponse, ProfileResponse, QualityResponse
 from services import file_service
 
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
@@ -43,3 +44,9 @@ def get_quality(dataset_id: str):
 def get_eda(dataset_id: str):
     df = file_service.load_clean_dataset(dataset_id)
     return EDAResponse(dataset_id=dataset_id, eda=build_eda(df))
+
+
+@router.get("/{dataset_id}/charts", response_model=ChartsResponse)
+def get_charts(dataset_id: str):
+    df = file_service.load_clean_dataset(dataset_id)
+    return ChartsResponse(dataset_id=dataset_id, **build_charts(df, build_eda(df)))

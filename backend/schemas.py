@@ -21,3 +21,9 @@ class QualityResponse(BaseModel):
 class EDAResponse(BaseModel):
     dataset_id: str
     eda: dict[str, Any]
+
+class ChartsResponse(BaseModel):
+    dataset_id: str
+    charts: list[dict[str, Any]]
+    skipped: list[dict[str, str]]
+    counts: dict[str, int]
