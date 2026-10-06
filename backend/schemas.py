@@ -27,3 +27,7 @@ class ChartsResponse(BaseModel):
     charts: list[dict[str, Any]]
     skipped: list[dict[str, str]]
     counts: dict[str, int]
+
+class KPIResponse(BaseModel):
+    dataset_id: str
+    kpis: dict[str, Any]

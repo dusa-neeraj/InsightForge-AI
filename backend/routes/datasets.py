@@ -3,10 +3,17 @@ from typing import Literal
 from fastapi import APIRouter
 
 from agents.analysis import build_eda
+from agents.kpis import build_kpis
 from agents.profiling import profile_dataframe
 from agents.quality import build_quality_report
 from agents.visualization import build_charts
-from schemas import ChartsResponse, EDAResponse, ProfileResponse, QualityResponse
+from schemas import (
+    ChartsResponse,
+    EDAResponse,
+    KPIResponse,
+    ProfileResponse,
+    QualityResponse,
+)
 from services import file_service
 
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
@@ -50,3 +57,9 @@ def get_eda(dataset_id: str):
 def get_charts(dataset_id: str):
     df = file_service.load_clean_dataset(dataset_id)
     return ChartsResponse(dataset_id=dataset_id, **build_charts(df, build_eda(df)))
+
+
+@router.get("/{dataset_id}/kpis", response_model=KPIResponse)
+def get_kpis(dataset_id: str):
+    df = file_service.load_clean_dataset(dataset_id)
+    return KPIResponse(dataset_id=dataset_id, kpis=build_kpis(df, build_eda(df)))
