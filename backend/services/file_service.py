@@ -83,3 +83,30 @@ def load_insights(dataset_id: str) -> dict[str, Any] | None:
     if not path.exists():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+MAX_CHAT_TURNS = 20
+
+
+def require_dataset(dataset_id: str) -> None:
+    if not (_dataset_dir(dataset_id) / "clean.csv").exists():
+        raise DatasetError("Dataset not found.", 404)
+
+
+def _chat_file(dataset_id: str, session_id: str) -> Path:
+    if not is_valid_dataset_id(session_id):
+        raise DatasetError("Invalid session ID.", 400)
+    return _dataset_dir(dataset_id) / "chat" / f"{session_id}.json"
+
+
+def load_chat_history(dataset_id: str, session_id: str) -> list[dict[str, Any]]:
+    path = _chat_file(dataset_id, session_id)
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def append_chat_turn(dataset_id: str, session_id: str, turn: dict[str, Any]) -> None:
+    path = _chat_file(dataset_id, session_id)
+    history = load_chat_history(dataset_id, session_id)[-(MAX_CHAT_TURNS - 1):] + [turn]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(history, default=str), encoding="utf-8")
