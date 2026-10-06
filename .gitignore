@@ -1,0 +1,23 @@
+# secrets
+.env
+
+# python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# user data and generated files
+backend/uploads/*
+backend/reports/*
+!backend/uploads/.gitkeep
+!backend/reports/.gitkeep
+
+# frontend
+node_modules/
+dist/
+
+# os / editor
+.DS_Store
+.vscode/
