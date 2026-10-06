@@ -7,3 +7,4 @@ openpyxl
 pydantic-settings
 pytest
 httpx
+openai

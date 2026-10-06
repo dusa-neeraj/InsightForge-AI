@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:5173"
     upload_dir: Path = BASE_DIR / "uploads"
     openai_api_key: str = ""  # used from Step 8 onwards
+    openai_model: str = "gpt-4o-mini"
+    llm_timeout_seconds: int = 30
 
     @property
     def max_upload_bytes(self) -> int:
@@ -21,6 +23,7 @@ class Settings(BaseSettings):
     @property
     def origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+    
 
 
 settings = Settings()

@@ -31,3 +31,10 @@ class ChartsResponse(BaseModel):
 class KPIResponse(BaseModel):
     dataset_id: str
     kpis: dict[str, Any]
+
+class InsightsResponse(BaseModel):
+    dataset_id: str
+    insights: list[dict[str, Any]]
+    narration: dict[str, Any]
+    roles: dict[str, Any]
+    cached: bool

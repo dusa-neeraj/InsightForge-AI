@@ -73,3 +73,13 @@ def load_cleaning_report(dataset_id: str) -> dict[str, Any]:
     if not path.exists():
         return {}
     return json.loads(path.read_text(encoding="utf-8"))
+def save_insights(dataset_id: str, payload: dict[str, Any]) -> None:
+    folder = _dataset_dir(dataset_id)
+    (folder / "insights.json").write_text(json.dumps(payload, default=str), encoding="utf-8")
+
+
+def load_insights(dataset_id: str) -> dict[str, Any] | None:
+    path = _dataset_dir(dataset_id) / "insights.json"
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))

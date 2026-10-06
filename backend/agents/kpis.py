@@ -235,6 +235,7 @@ def build_kpis(df: pd.DataFrame, eda: dict[str, Any]) -> dict[str, Any]:
         "roles": {
             "primary_measure": primary,
             "primary_basis": basis,
+            "business_like": business,
             "aggregation": agg if primary else None,
             "secondary_measure": secondary,
             "dimensions": [d["name"] for d in dimensions],
