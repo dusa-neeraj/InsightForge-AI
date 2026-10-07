@@ -2,6 +2,7 @@ from typing import Any
 
 import pandas as pd
 
+from agents.drivers import analyze_drivers
 from agents.profiling import _num as to_number, column_kind
 from agents.query_plan import Filter, QueryPlan
 from agents.trends import _grain, _is_partial_last, _period_labels
@@ -160,6 +161,8 @@ def execute_plan(plan: QueryPlan, df: pd.DataFrame) -> dict[str, Any]:
     base = {"matched_rows": int(len(data)), "total_rows": int(len(df))}
     if data.empty:
         return {**base, "kind": "empty", "rows": [], "focus": {}}
+    if plan.operation == "change_drivers":
+        return analyze_drivers(plan, data, base, label_for(plan), _filter_focus(plan))
     if plan.operation == "describe":
         return _describe(plan, data, base)
     if plan.operation == "trend":

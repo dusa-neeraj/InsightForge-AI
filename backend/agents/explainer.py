@@ -30,6 +30,13 @@ def method_steps(plan: QueryPlan, result: dict[str, Any]) -> list[str]:
     kind = result["kind"]
     if kind == "empty":
         steps.append("No rows were left to calculate with")
+    elif kind == "drivers":
+        steps.append(f"Compared {result['target_period']} with the previous {result['grain']} "
+                     f"({result['previous_period']})")
+        steps.append(f"Calculated the {result['label']} for each period and the change between them")
+        if result["dimensions"]:
+            columns = " and ".join(f"'{d['column']}'" for d in result["dimensions"])
+            steps.append(f"Split the change by {columns} to see which groups contributed most")
     elif kind == "trend":
         steps.append(f"Grouped rows by {result['grain']} using '{result['date_column']}'")
         steps.append(f"Calculated the {result['label']} for each {result['grain']}")
@@ -45,11 +52,34 @@ def method_steps(plan: QueryPlan, result: dict[str, Any]) -> list[str]:
     return steps
 
 
+def _drivers_answer(plan: QueryPlan, result: dict[str, Any]) -> str:
+    label, scope = result["label"], _scope(plan)
+    target, previous = result["target_period"], result["previous_period"]
+    now, then = _fmt(result["target_value"]), _fmt(result["previous_value"])
+    direction, pct = result["direction"], result["change_pct"]
+
+    if direction == "flat":
+        text = f"The {label}{scope} stayed about the same from {previous} ({then}) to {target} ({now})."
+    else:
+        verb = "rose" if direction == "increase" else "fell"
+        amount = f" {abs(pct):.1f}%" if pct is not None else ""
+        text = (f"The {label}{scope} {verb}{amount} from {previous} ({then}) to {target} ({now}), "
+                f"a change of {_fmt(result['change'])}.")
+
+    for dim in result["dimensions"]:
+        parts = [f"'{c['group']}' ({_fmt(c['change'])}, {c['share_pct']:.0f}% of the change)"
+                 for c in dim["contributors"][:2]]
+        text += f" By {dim['column'].replace('_', ' ')}: " + ", ".join(parts) + "."
+    return text + " " + " ".join(result["notes"])
+
+
 def build_answer(plan: QueryPlan, result: dict[str, Any]) -> str:
     """Write the answer from the computed numbers only."""
     kind = result["kind"]
     if kind == "empty":
         return result.get("note") or "No rows match those filters, so there is nothing to calculate."
+    if kind == "drivers":
+        return _drivers_answer(plan, result)
 
     label, scope, rows = result["label"], _scope(plan), result["rows"]
 

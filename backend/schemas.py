@@ -1,7 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 class UploadResponse(BaseModel):
     dataset_id: str
@@ -70,3 +69,41 @@ class ChatHistoryResponse(BaseModel):
     dataset_id: str
     session_id: str
     turns: list[dict[str, Any]]
+
+class SqlRequest(BaseModel):
+    question: str | None = Field(default=None, max_length=500)
+    sql: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def exactly_one(self):
+        question = (self.question or "").strip()
+        sql = (self.sql or "").strip()
+        if bool(question) == bool(sql):
+            raise ValueError("Send either a question or SQL, not both and not neither.")
+        self.question = question or None
+        self.sql = sql or None
+        return self
+
+
+class SqlResponse(BaseModel):
+    dataset_id: str
+    status: str  # ok | rejected | error | unsupported
+    source: str  # user | ai | rules
+    question: str | None
+    sql: str | None
+    explanation: str | None
+    message: str | None
+    note: str | None
+    columns: list[str]
+    rows: list[list[Any]]
+    row_count: int
+    truncated: bool
+    elapsed_ms: int
+
+
+class SqlSchemaResponse(BaseModel):
+    dataset_id: str
+    table: str
+    rows: int
+    columns: list[dict[str, Any]]
+    notes: list[str]

@@ -167,7 +167,7 @@ def test_describe_measure(dataset_id):
 
 
 def test_unsupported_questions_get_suggestions(dataset_id):
-    for question in ("Why did revenue fall in July?", "blah blah blah"):
+    for question in ("Predict the revenue for next year", "blah blah blah"):
         body = ask(dataset_id, question)
         assert body["status"] == "unsupported"
         assert body["suggestions"]

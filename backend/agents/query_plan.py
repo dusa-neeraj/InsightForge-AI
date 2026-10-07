@@ -4,14 +4,12 @@ from typing import Literal
 import pandas as pd
 from pydantic import BaseModel, Field
 
+from agents.periods import resolve_period
 from agents.profiling import column_kind
+from utils.errors import PlanError
 
 Scalar = str | int | float | bool
 NUMERIC_AGGS = {"sum", "mean", "median", "min", "max"}
-
-
-class PlanError(Exception):
-    """The plan cannot be run safely. The message is written for end users."""
 
 
 class Filter(BaseModel):
@@ -21,7 +19,7 @@ class Filter(BaseModel):
 
 
 class QueryPlan(BaseModel):
-    operation: Literal["aggregate", "trend", "describe", "unsupported"]
+    operation: Literal["aggregate", "trend", "describe", "change_drivers", "unsupported"]
     measure: str | None = None
     aggregation: Literal["sum", "mean", "median", "min", "max", "count", "nunique"] = "sum"
     group_by: list[str] = Field(default_factory=list, max_length=2)
@@ -30,6 +28,7 @@ class QueryPlan(BaseModel):
     limit: int | None = Field(default=None, ge=1, le=100)
     date_column: str | None = None
     time_grain: Literal["day", "week", "month"] | None = None
+    period: str | None = None  # change_drivers only: "July", "2024-07", "latest"
     reason: str | None = None
 
 
@@ -97,6 +96,11 @@ def validate_plan(plan: QueryPlan, df: pd.DataFrame) -> QueryPlan:
         raise PlanError(
             f"'{measure}' is not a numeric column, so I can't calculate its {plan.aggregation}."
         )
+    if plan.operation == "change_drivers" and plan.aggregation not in ("sum", "count"):
+        raise PlanError(
+            "I can explain changes in totals and counts. Averages need a different kind "
+            "of analysis that isn't supported yet."
+        )
     if plan.operation == "describe":
         if not measure or column_kind(df[measure]) != "numeric":
             raise PlanError("Tell me which numeric column to describe, for example: describe revenue.")
@@ -112,16 +116,19 @@ def validate_plan(plan: QueryPlan, df: pd.DataFrame) -> QueryPlan:
             group_by.append(col)
 
     date_column = None
-    if plan.operation == "trend":
+    period, grain = plan.period, plan.time_grain
+    if plan.operation in ("trend", "change_drivers"):
         if plan.date_column:
             date_column = _resolve(plan.date_column, df)
         else:
             dates = [c for c in df.columns if column_kind(df[c]) == "date"]
             if not dates:
-                raise PlanError("This dataset has no date column, so I can't show a trend over time.")
+                raise PlanError("This dataset has no date column, so I can't look at changes over time.")
             date_column = dates[0]
         if column_kind(df[date_column]) != "date":
             raise PlanError(f"'{date_column}' is not a date column.")
+    if plan.operation == "change_drivers":
+        period, grain = resolve_period(df, date_column, plan.period, plan.time_grain)
 
     filters = [_check_filter(f, df) for f in plan.filters]
     limit = plan.limit if plan.limit else (10 if group_by else None)
@@ -132,5 +139,7 @@ def validate_plan(plan: QueryPlan, df: pd.DataFrame) -> QueryPlan:
             "date_column": date_column,
             "filters": filters,
             "limit": limit,
+            "period": period,
+            "time_grain": grain,
         }
     )

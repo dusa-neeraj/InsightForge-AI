@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from config import settings
-from routes import chat, datasets, insights, upload
+from routes import chat, datasets, insights, sql, upload
 from utils.errors import DatasetError
 
 logging.basicConfig(
@@ -52,3 +52,4 @@ app.include_router(upload.router)
 app.include_router(datasets.router)
 app.include_router(insights.router)
 app.include_router(chat.router)
+app.include_router(sql.router)
