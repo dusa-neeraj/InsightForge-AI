@@ -2,24 +2,29 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+
 class UploadResponse(BaseModel):
     dataset_id: str
     filename: str
     report: dict[str, Any]
     preview: list[dict[str, str]]
 
+
 class ProfileResponse(BaseModel):
     dataset_id: str
     version: str
     profile: dict[str, Any]
 
+
 class QualityResponse(BaseModel):
     dataset_id: str
     quality: dict[str, Any]
 
+
 class EDAResponse(BaseModel):
     dataset_id: str
     eda: dict[str, Any]
+
 
 class ChartsResponse(BaseModel):
     dataset_id: str
@@ -27,9 +32,11 @@ class ChartsResponse(BaseModel):
     skipped: list[dict[str, str]]
     counts: dict[str, int]
 
+
 class KPIResponse(BaseModel):
     dataset_id: str
     kpis: dict[str, Any]
+
 
 class InsightsResponse(BaseModel):
     dataset_id: str
@@ -37,6 +44,7 @@ class InsightsResponse(BaseModel):
     narration: dict[str, Any]
     roles: dict[str, Any]
     cached: bool
+
 
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=500)
@@ -69,6 +77,7 @@ class ChatHistoryResponse(BaseModel):
     dataset_id: str
     session_id: str
     turns: list[dict[str, Any]]
+
 
 class SqlRequest(BaseModel):
     question: str | None = Field(default=None, max_length=500)
@@ -107,3 +116,10 @@ class SqlSchemaResponse(BaseModel):
     rows: int
     columns: list[dict[str, Any]]
     notes: list[str]
+
+
+class PreviewResponse(BaseModel):
+    dataset_id: str
+    columns: list[str]
+    total_rows: int
+    rows: list[list[Any]]
