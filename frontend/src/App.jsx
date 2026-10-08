@@ -2,11 +2,14 @@ import { lazy, Suspense } from "react";
 import { Link, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
 import { EmptyState, Spinner } from "./components/ui.jsx";
+import Chat from "./pages/Chat.jsx";
 import Cleaning from "./pages/Cleaning.jsx";
 import ComingSoon from "./pages/ComingSoon.jsx";
 import Home from "./pages/Home.jsx";
+import Insights from "./pages/Insights.jsx";
 import Overview from "./pages/Overview.jsx";
 import Quality from "./pages/Quality.jsx";
+import SqlExplorer from "./pages/SqlExplorer.jsx";
 import Upload from "./pages/Upload.jsx";
 
 // Plotly is large, so the dashboard code is only downloaded when the page is opened
@@ -43,6 +46,9 @@ export default function App() {
             </Suspense>
           }
         />
+        <Route path="datasets/:datasetId/insights" element={<Insights />} />
+        <Route path="datasets/:datasetId/chat" element={<Chat />} />
+        <Route path="datasets/:datasetId/sql" element={<SqlExplorer />} />
         <Route path="datasets/:datasetId/:page" element={<ComingSoon />} />
         <Route path="*" element={<NotFound />} />
       </Route>
