@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import Plotly from "plotly.js-dist-min";
+import Plotly from "plotly.js-cartesian-dist-min";
 
 // Draws a Plotly figure ({ data, layout }) sent by the backend.
 export default function PlotlyChart({ figure, label, height = 340 }) {
