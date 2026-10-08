@@ -47,7 +47,7 @@ class InsightsResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    question: str = Field(min_length=1, max_length=500)
+    question: str = Field(min_length=1, max_length=2000)
     session_id: str | None = None
 
     @field_validator("question")
@@ -71,6 +71,7 @@ class ChatResponse(BaseModel):
     source: str
     note: str | None
     suggestions: list[str]
+    parts: list[dict[str, Any]] | None = None
 
 
 class ChatHistoryResponse(BaseModel):

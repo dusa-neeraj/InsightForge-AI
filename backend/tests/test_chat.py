@@ -227,7 +227,7 @@ def test_chat_history_endpoint(dataset_id):
 def test_question_validation(dataset_id):
     url = f"/datasets/{dataset_id}/chat"
     assert client.post(url, json={"question": "   "}).status_code == 422
-    assert client.post(url, json={"question": "x" * 501}).status_code == 422
+    assert client.post(url, json={"question": "x" * 2001}).status_code == 422
 
 
 def test_responses_are_json_safe(dataset_id):

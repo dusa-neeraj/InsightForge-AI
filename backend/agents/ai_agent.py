@@ -19,6 +19,16 @@ ADDITIVE_WORDS = {"revenue", "sales", "amount", "total", "quantity", "qty", "uni
                   "volume", "cost", "profit", "income", "spend", "expense", "count"}
 PRONOUNS = {"it", "that", "those", "them", "this", "they", "its", "their"}
 
+# Words that mean the same thing. Asking for "sales" should find a "revenue" column,
+# and asking for "profit" must NOT silently fall back to another column.
+SYNONYM_GROUPS = [
+    {"sales", "revenue", "turnover"},
+    {"profit", "earnings"},
+    {"cost", "costs", "expense", "expenses", "spend"},
+    {"price", "prices"},
+    {"quantity", "qty", "units"},
+]
+
 WHY_RE = re.compile(r"\bwhy\b")
 PREDICT_RE = re.compile(r"\b(predict|forecast|projection|projections)\b")
 TREND_RE = re.compile(r"\b(trend|trends|over time|monthly|weekly|daily|timeline|(per|by|each) (day|week|month))\b")
@@ -117,22 +127,54 @@ def suggest_questions(schema: dict[str, Any]) -> list[str]:
 
 # ---------- keyword planner (works without an API key) ----------
 
-def _mentioned(words: set[str], names: list[str]) -> list[str]:
+def _mentioned(words: set[str], names: list[str], reserved: frozenset[str] = frozenset()) -> list[str]:
+    """Columns named in the question. `reserved` words (parts of measure names) never
+    count on their own, so 'sales' does not match a 'sales_channel' column."""
     found = []
     for name in names:
         parts = [p for p in name.lower().split("_") if p]
         hit = [p for p in parts if p in words or p + "s" in words
                or (p.endswith("s") and p[:-1] in words)]
-        if hit and (len(hit) == len(parts) or any(len(p) >= 4 for p in hit)):
+        full = bool(hit) and len(hit) == len(parts)
+        partial = any(len(p) >= 4 and p not in reserved for p in hit)
+        if full or partial:
             found.append(name)
     return found
+
+
+def _resolve_synonyms(
+    words: set[str], schema: dict[str, Any], measures: list[str]
+) -> tuple[list[str], str | None]:
+    """Maps 'sales' to a revenue column and so on. Returns (measures, missing_word)."""
+    found = list(measures)
+    for group in SYNONYM_GROUPS:
+        asked = group & words
+        if not asked:
+            continue
+        if any(set(m.lower().split("_")) & group for m in found):
+            continue
+        matches = [m for m in schema["measures"] if set(m.lower().split("_")) & group]
+        if matches:
+            found.append(matches[0])
+        else:
+            return found, sorted(asked)[0]
+    return found, None
 
 
 def rule_plan(question: str, schema: dict[str, Any], history: list[dict[str, Any]]) -> QueryPlan:
     q = question.lower()
     words = set(re.findall(r"[a-z0-9]+", q))
 
+    reserved = frozenset(t for m in schema["measures"] for t in m.lower().split("_"))
     measures = _mentioned(words, schema["measures"])
+    measures, missing = _resolve_synonyms(words, schema, measures)
+    if missing:
+        shown = ", ".join(schema["measures"][:8]) or "none"
+        return QueryPlan(
+            operation="unsupported",
+            reason=f"I couldn't find a column for '{missing}' in this dataset. "
+                   f"Numeric columns I can use: {shown}.",
+        )
 
     if PREDICT_RE.search(q):
         return QueryPlan(
@@ -143,8 +185,8 @@ def rule_plan(question: str, schema: dict[str, Any], history: list[dict[str, Any
     if WHY_RE.search(q):
         return why_plan(q, schema, measures[0] if measures else None)
 
-    dims = _mentioned(words, schema["dimensions"])
-    dates = _mentioned(words, schema["date_columns"])
+    dims = _mentioned(words, schema["dimensions"], reserved)
+    dates = _mentioned(words, schema["date_columns"], reserved)
 
     # category values named in the question become filters
     filters: list[Filter] = []
