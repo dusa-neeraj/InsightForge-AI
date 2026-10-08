@@ -9,12 +9,7 @@ from agents.quality import build_quality_report
 from services import file_service
 
 
-def get_insights(dataset_id: str, refresh: bool = False) -> dict[str, Any]:
-    if not refresh:
-        cached = file_service.load_insights(dataset_id)
-        if cached:
-            return {**cached, "cached": True}
-
+def _compute(dataset_id: str):
     raw_df = file_service.load_raw_dataset(dataset_id)
     df = file_service.load_clean_dataset(dataset_id)
     cleaning_report = file_service.load_cleaning_report(dataset_id)
@@ -25,6 +20,24 @@ def get_insights(dataset_id: str, refresh: bool = False) -> dict[str, Any]:
         profile_dataframe(raw_df), profile_dataframe(df), cleaning_report
     )
     insights = build_insights(df, eda, kpis, quality)
+    return eda, kpis, quality, insights
+
+
+def calculated_insights(dataset_id: str) -> list[dict[str, Any]]:
+    """The calculated insights only. No AI is involved, so this is free and fast."""
+    cached = file_service.load_insights(dataset_id)
+    if cached:
+        return cached["insights"]
+    return _compute(dataset_id)[3]
+
+
+def get_insights(dataset_id: str, refresh: bool = False) -> dict[str, Any]:
+    if not refresh:
+        cached = file_service.load_insights(dataset_id)
+        if cached:
+            return {**cached, "cached": True}
+
+    eda, kpis, quality, insights = _compute(dataset_id)
     narration = narrate(build_facts(eda, kpis, quality, insights), insights)
 
     payload = {"insights": insights, "narration": narration, "roles": kpis["roles"]}
