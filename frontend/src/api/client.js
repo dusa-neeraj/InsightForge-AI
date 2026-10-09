@@ -78,3 +78,51 @@ export const sendChat = (id, question, sessionId) =>
 export const getChatHistory = (id, sessionId) => request(`/datasets/${id}/chat/${sessionId}`);
 export const runSql = (id, body) => post(`/datasets/${id}/sql`, body);
 export const getSqlSchema = (id) => request(`/datasets/${id}/sql/schema`);
+
+async function fetchBlob(path) {
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`);
+  } catch {
+    throw new ApiError("Cannot reach the server. Is the backend running?", 0);
+  }
+  if (!response.ok) {
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      // the error had no JSON body
+    }
+    throw new ApiError(errorMessage(data, response.status), response.status);
+  }
+  return response.blob();
+}
+
+function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+// Downloads a file from the backend, and shows a readable error if something goes wrong
+export async function downloadFile(path, filename) {
+  saveBlob(await fetchBlob(path), filename);
+}
+
+// Opens the HTML report in a new tab. The tab is opened first so pop-up blockers allow it.
+export async function openPreview(path) {
+  const tab = window.open("", "_blank");
+  try {
+    const blob = await fetchBlob(path);
+    if (tab) tab.location.href = URL.createObjectURL(blob);
+    else saveBlob(blob, "analysis-report.html");
+  } catch (error) {
+    if (tab) tab.close();
+    throw error;
+  }
+}
