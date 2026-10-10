@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet, useMatch } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useMatch } from "react-router-dom";
 import { getHealth } from "../api/client.js";
 import { useAsync } from "../hooks/useAsync.js";
 import { DATASET_NAV } from "../lib/nav.js";
 import { recentName } from "../lib/recent.js";
+import ErrorBoundary from "./ErrorBoundary.jsx";
 import { Badge } from "./ui.jsx";
 
 function BackendStatus() {
@@ -20,6 +21,7 @@ function BackendStatus() {
 
 export default function Layout() {
   const match = useMatch("/datasets/:datasetId/*");
+  const location = useLocation();
   const datasetId = match?.params.datasetId;
   const [open, setOpen] = useState(false);
 
@@ -92,7 +94,10 @@ export default function Layout() {
 
       <main className="lg:pl-64">
         <div className="mx-auto max-w-6xl p-4 sm:p-8">
-          <Outlet />
+          {/* the key resets the boundary when you move to another page */}
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </main>
     </div>

@@ -4,6 +4,7 @@ import { Badge, Card, ErrorBanner, PageHeader, Spinner, StatCard } from "../comp
 import { useAsync } from "../hooks/useAsync.js";
 import { formatNumber, formatPercent } from "../lib/format.js";
 import { recentName } from "../lib/recent.js";
+import DeleteDatasetButton from "../components/DeleteDatasetButton.jsx";
 
 const KIND = {
   numeric: { label: "Number", tone: "indigo" },
@@ -92,12 +93,15 @@ export default function Overview() {
         title={recentName(datasetId) || "Dataset overview"}
         subtitle="What your data looks like after automatic cleaning"
         actions={
-          <Link
-            to="/upload"
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Upload another
-          </Link>
+          <>
+            <DeleteDatasetButton datasetId={datasetId} />
+            <Link
+              to="/upload"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Upload another
+            </Link>
+          </>
         }
       />
 

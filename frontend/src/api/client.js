@@ -126,3 +126,5 @@ export async function openPreview(path) {
     throw error;
   }
 }
+
+export const deleteDataset = (id) => request(`/datasets/${id}`, { method: "DELETE" });
