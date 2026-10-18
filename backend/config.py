@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     upload_dir: Path = BASE_DIR / "uploads"
     openai_api_key: str = ""  # used from Step 8 onwards
     openai_model: str = "gpt-4o-mini"
+    rate_limit_enabled: bool = True
+    rate_upload_per_min: int = 10
+    rate_chat_per_min: int = 30
+    rate_report_per_min: int = 6
+    trust_proxy_headers: bool = False  # only turn on behind a proxy you control
+    retention_hours: int = 168  # 0 keeps datasets forever
     llm_timeout_seconds: int = 30
 
     @property

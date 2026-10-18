@@ -8,3 +8,7 @@ pydantic-settings
 pytest
 httpx
 openai
+matplotlib
+reportlab
+pytest-cov
+httpx2

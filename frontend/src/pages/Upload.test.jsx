@@ -20,14 +20,25 @@ describe("Upload page validation", () => {
   it("rejects unsupported file types without offering to upload", () => {
     const input = setup();
     choose(input, new File(["hello"], "notes.txt", { type: "text/plain" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Only .csv and .xlsx");
+    expect(screen.getByText(/Only \.csv and \.xlsx/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Analyze dataset" })).not.toBeInTheDocument();
   });
 
   it("rejects empty files", () => {
     const input = setup();
     choose(input, new File([], "empty.csv"));
-    expect(screen.getByRole("alert")).toHaveTextContent("empty");
+    expect(screen.getByText("That file is empty.")).toBeInTheDocument();
+  });
+
+  it("explains oversized files with their size and a tip", () => {
+    const input = setup();
+    const huge = new File(["x"], "big.csv", { type: "text/csv" });
+    Object.defineProperty(huge, "size", { value: 5 * 1024 ** 3 }); // 5 GB, over any limit
+    choose(input, huge);
+    expect(screen.getByText("This file can't be uploaded")).toBeInTheDocument();
+    expect(screen.getByText(/limit is \d+ MB/)).toBeInTheDocument();
+    expect(screen.getByText(/saving it as CSV/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Analyze dataset" })).not.toBeInTheDocument();
   });
 
   it("accepts a CSV and offers to analyze it", () => {

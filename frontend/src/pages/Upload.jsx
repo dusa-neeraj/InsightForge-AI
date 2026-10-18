@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadDataset } from "../api/client.js";
+import Notice from "../components/Notice.jsx";
 import { ErrorBanner, PageHeader } from "../components/ui.jsx";
 import { formatBytes } from "../lib/format.js";
 import { addRecent } from "../lib/recent.js";
@@ -8,11 +9,21 @@ import { addRecent } from "../lib/recent.js";
 const MAX_MB = Number(import.meta.env.VITE_MAX_UPLOAD_MB) || 10;
 const ALLOWED = [".csv", ".xlsx"];
 
+// Returns { message, tip } when the file can't be used, or null when it is fine
 function validate(file) {
   const name = file.name.toLowerCase();
-  if (!ALLOWED.some((ext) => name.endsWith(ext))) return "Only .csv and .xlsx files are supported.";
-  if (file.size === 0) return "That file is empty.";
-  if (file.size > MAX_MB * 1024 * 1024) return `That file is too large. The limit is ${MAX_MB} MB.`;
+  if (!ALLOWED.some((ext) => name.endsWith(ext))) {
+    return { message: "Only .csv and .xlsx files are supported.", tip: "Export or save your data as CSV or Excel." };
+  }
+  if (file.size === 0) {
+    return { message: "That file is empty.", tip: "Check that you picked the right file." };
+  }
+  if (file.size > MAX_MB * 1024 * 1024) {
+    return {
+      message: `That file is ${formatBytes(file.size)}, and the limit is ${MAX_MB} MB.`,
+      tip: "Try saving it as CSV (smaller than Excel), or upload a sample of the rows.",
+    };
+  }
   return null;
 }
 
@@ -20,7 +31,8 @@ export default function Upload() {
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const [file, setFile] = useState(null);
-  const [error, setError] = useState(null);
+  const [problem, setProblem] = useState(null); // the chosen file can't be used
+  const [error, setError] = useState(null); // the upload itself failed
   const [dragging, setDragging] = useState(false);
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState("idle"); // idle | uploading | analyzing
@@ -28,9 +40,10 @@ export default function Upload() {
 
   function choose(selected) {
     if (!selected || busy) return;
-    const problem = validate(selected);
-    setError(problem);
-    setFile(problem ? null : selected);
+    const found = validate(selected);
+    setError(null);
+    setProblem(found);
+    setFile(found ? null : selected);
   }
 
   async function submit() {
@@ -96,6 +109,15 @@ export default function Upload() {
           }}
         />
       </div>
+
+      {problem && (
+        <div className="mt-4">
+          <Notice tone="amber" title="This file can't be uploaded">
+            <p>{problem.message}</p>
+            <p className="mt-1 text-xs">{problem.tip}</p>
+          </Notice>
+        </div>
+      )}
 
       {error && (
         <div className="mt-4">

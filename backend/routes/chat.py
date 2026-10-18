@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from schemas import ChatHistoryResponse, ChatRequest, ChatResponse
 from services import chat_service, file_service
+from services.rate_limit import limit_chat
 
-router = APIRouter(prefix="/datasets", tags=["Chat"])
+router = APIRouter(prefix="/datasets", tags=["Chat"], dependencies=[Depends(limit_chat)])
 
 
 @router.post("/{dataset_id}/chat", response_model=ChatResponse)

@@ -1,4 +1,6 @@
 import json
+import logging
+import time
 import warnings
 from pathlib import Path
 from typing import Any
@@ -10,6 +12,7 @@ from utils.errors import DatasetError
 from utils.helpers import is_valid_dataset_id
 from utils.validators import read_dataframe
 
+logger = logging.getLogger(__name__)
 DATE_PATTERN = r"^\s*\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}"
 
 
@@ -36,6 +39,33 @@ def _restore_dates(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _write_dataset_files(
+    folder: Path,
+    clean_df: pd.DataFrame,
+    cleaning_report: dict[str, Any],
+) -> None:
+    """Write cleaned data and report while logging each save sub-stage."""
+    started = time.perf_counter()
+    clean_path = folder / "clean.csv"
+    clean_df.to_csv(clean_path, index=False)
+    logger.info(
+        "Dataset save stage=clean_csv_written rows=%s columns=%s bytes=%s elapsed=%.2fs",
+        len(clean_df),
+        len(clean_df.columns),
+        clean_path.stat().st_size,
+        time.perf_counter() - started,
+    )
+
+    report_started = time.perf_counter()
+    report_path = folder / "cleaning_report.json"
+    report_path.write_text(json.dumps(cleaning_report, default=str), encoding="utf-8")
+    logger.info(
+        "Dataset save stage=cleaning_report_written bytes=%s elapsed=%.2fs",
+        report_path.stat().st_size,
+        time.perf_counter() - report_started,
+    )
+
+
 def save_dataset(
     dataset_id: str,
     raw_content: bytes,
@@ -43,13 +73,55 @@ def save_dataset(
     clean_df: pd.DataFrame,
     cleaning_report: dict[str, Any],
 ) -> None:
+    total_started = time.perf_counter()
     folder = _dataset_dir(dataset_id)
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / f"raw{ext}").write_bytes(raw_content)
-    clean_df.to_csv(folder / "clean.csv", index=False)
-    (folder / "cleaning_report.json").write_text(
-        json.dumps(cleaning_report, default=str), encoding="utf-8"
+
+    raw_started = time.perf_counter()
+    raw_path = folder / f"raw{ext}"
+    raw_path.write_bytes(raw_content)
+    logger.info(
+        "Dataset save stage=raw_file_written bytes=%s elapsed=%.2fs",
+        raw_path.stat().st_size,
+        time.perf_counter() - raw_started,
     )
+
+    _write_dataset_files(folder, clean_df, cleaning_report)
+    logger.info("Dataset save stage=complete elapsed=%.2fs", time.perf_counter() - total_started)
+
+
+def save_dataset_from_path(
+    dataset_id: str,
+    raw_path: Path,
+    ext: str,
+    clean_df: pd.DataFrame,
+    cleaning_report: dict[str, Any],
+) -> None:
+    """Save a disk-based raw upload and its cleaned dataset."""
+    total_started = time.perf_counter()
+    folder = _dataset_dir(dataset_id)
+    folder.mkdir(parents=True, exist_ok=True)
+
+    destination = folder / f"raw{ext}"
+
+    # Avoid copying the file when it is already at the destination.
+    raw_started = time.perf_counter()
+    if raw_path.resolve() != destination.resolve():
+        import shutil
+        shutil.copyfile(raw_path, destination)
+        raw_action = "copied"
+    else:
+        raw_action = "already_at_destination"
+    raw_size = destination.stat().st_size if destination.exists() else raw_path.stat().st_size
+    logger.info(
+        "Dataset save stage=raw_file_%s bytes=%s elapsed=%.2fs",
+        raw_action,
+        raw_size,
+        time.perf_counter() - raw_started,
+    )
+
+    _write_dataset_files(folder, clean_df, cleaning_report)
+    logger.info("Dataset save stage=complete elapsed=%.2fs", time.perf_counter() - total_started)
 
 
 def load_clean_dataset(dataset_id: str) -> pd.DataFrame:
@@ -73,6 +145,8 @@ def load_cleaning_report(dataset_id: str) -> dict[str, Any]:
     if not path.exists():
         return {}
     return json.loads(path.read_text(encoding="utf-8"))
+
+
 def save_insights(dataset_id: str, payload: dict[str, Any]) -> None:
     folder = _dataset_dir(dataset_id)
     (folder / "insights.json").write_text(json.dumps(payload, default=str), encoding="utf-8")
@@ -83,6 +157,7 @@ def load_insights(dataset_id: str) -> dict[str, Any] | None:
     if not path.exists():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
 
 MAX_CHAT_TURNS = 20
 

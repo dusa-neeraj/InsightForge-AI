@@ -7,8 +7,7 @@ class UploadResponse(BaseModel):
     dataset_id: str
     filename: str
     report: dict[str, Any]
-    preview: list[dict[str, str]]
-
+    preview: list[dict[str, Any]]
 
 class ProfileResponse(BaseModel):
     dataset_id: str

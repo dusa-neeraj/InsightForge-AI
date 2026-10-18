@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from schemas import InsightsResponse
 from services import analysis_service
+from services.rate_limit import limit_insights
 
-router = APIRouter(prefix="/datasets", tags=["Insights"])
+router = APIRouter(prefix="/datasets", tags=["Insights"], dependencies=[Depends(limit_insights)])
 
 
 @router.get("/{dataset_id}/insights", response_model=InsightsResponse)

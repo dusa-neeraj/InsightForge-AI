@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from schemas import SqlRequest, SqlResponse, SqlSchemaResponse
 from services import sql_service
+from services.rate_limit import limit_sql
 
-router = APIRouter(prefix="/datasets", tags=["SQL"])
+router = APIRouter(prefix="/datasets", tags=["SQL"], dependencies=[Depends(limit_sql)])
 
 
 @router.post("/{dataset_id}/sql", response_model=SqlResponse)

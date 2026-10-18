@@ -19,5 +19,10 @@ def safe_filename(name: str | None) -> str:
     return re.sub(r"[^A-Za-z0-9._-]", "_", base)[:100]
 
 
-def dataframe_preview(df: pd.DataFrame, rows: int = 10) -> list[dict[str, str]]:
-    return df.head(rows).astype(str).to_dict(orient="records")
+import pandas as pd
+
+
+def dataframe_preview(df, limit=10):
+    preview_df = df.head(limit).astype(object)
+    preview_df = preview_df.where(pd.notna(preview_df), "")
+    return preview_df.to_dict(orient="records")

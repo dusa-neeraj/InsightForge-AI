@@ -1,23 +1,40 @@
-# secrets
+# Secrets and environment variables
 .env
+.env.*
+!.env.example
 
-# python
+# Python virtual environments
 venv/
 .venv/
-__pycache__/
-*.pyc
-.pytest_cache/
+.venv-1/
+**/venv/
+**/.venv/
+**/.venv-1/
 
-# user data and generated files
+# Python cache and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# User data and generated files
+sample_data/
 backend/uploads/*
-backend/reports/*
 !backend/uploads/.gitkeep
+backend/reports/*
 !backend/reports/.gitkeep
 
-# frontend
+# Frontend dependencies and build output
 node_modules/
+frontend/node_modules/
+frontend/dist/
 dist/
 
-# os / editor
+# OS and editor files
 .DS_Store
+Thumbs.db
 .vscode/
+
+# Backup files
+*.bak

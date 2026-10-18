@@ -288,7 +288,6 @@ def _llm_history(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
         for t in history[-3:]
     ]
 
-
 def make_plan(
     question: str, schema: dict[str, Any], history: list[dict[str, Any]]
 ) -> tuple[QueryPlan, str, str | None]:
